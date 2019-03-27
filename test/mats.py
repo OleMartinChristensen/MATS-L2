@@ -15,25 +15,26 @@ if not ip is None:
 import h5py
 f = h5py.File('../data/MATS.mat', 'r')
 
-y = f["y_sim"][:].reshape(-1, 1) * 1e10
+y = np.array(f["y_sim"][:], dtype = np.float32).reshape(-1, 1) * 1e10
 y_img = f["y_km"][:].reshape(-1, 1)
 m = y.shape[0]
 
-xa = f["xa"][:].reshape(-1, 1) * 1e5
+xa = np.array(f["xa"][:], dtype = np.float32).reshape(-1, 1) * 1e5
 x_true = f["x_true"][:].reshape(-1, 1) * 1e10
 n  = xa.shape[0]
 
-data    = f["K"]["data"][:]
+data    = np.array(f["K"]["data"][:], dtype = np.float32)
 indices = f["K"]["ir"]
 indptr  = f["K"]["jc"]
 K = sp.sparse.csc_matrix((data, indices, indptr), shape = (m, n))
+#K = (K, sp.sparse.csr_matrix(K))
 
-data    = f["Sainv"]["data"][:] * 1e-20
+data    = np.array(f["Sainv"]["data"][:] * 1e-20, dtype = np.float32)
 indices = f["Sainv"]["ir"]
 indptr  = f["Sainv"]["jc"]
 SaInv = sp.sparse.csc_matrix((data, indices, indptr), shape = (n, n))
 
-data    = f["Seinv"]["data"][:] * 1e-20
+data    = np.array(f["Seinv"]["data"][:] * 1e-20, dtype = np.float32)
 indices = f["Seinv"]["ir"]
 indptr  = f["Seinv"]["jc"]
 SeInv = sp.sparse.csc_matrix((data, indices, indptr), shape = (m, m))
@@ -42,33 +43,33 @@ SeInv = sp.sparse.csc_matrix((data, indices, indptr), shape = (m, m))
 # Running invlib
 ################################################################################
 
-from invlib.oem    import OEM
-from invlib.vector import Vector
-from invlib.mkl    import MklSparseCsc
+from invlib.oem           import OEM
+from invlib.forward_model import LinearModel
+from invlib.vector        import Vector
+from invlib.matrix        import Matrix
 
-K     = MklSparseCsc(K)
-SaInv = MklSparseCsc(SaInv)
-SeInv = MklSparseCsc(SeInv)
-xa    = xa.view(Vector)
-y     = y.view(Vector)
+K     = Matrix(K)
+f     = LinearModel(K)
+SaInv = Matrix(SaInv)
+SeInv = Matrix(SeInv)
+xa    = Vector(xa)
+y     = Vector(y)
 
-def aaa(x):
-    xx = K.transpose_multiply(SeInv.multiply(K.multiply(x)))
-    xx.add(SaInv.multiply(x))
-    return xx
+oem = OEM(f, SaInv, SeInv, xa)
+oem.optimizer.solver.verbosity = 1
+oem.optimizer.solver.tolerance = 1e-3
 
-def compute_dx(x):
-    dy = y - K.multiply(x.view(Vector))
-    dx = K.transpose_multiply(dy.view(Vector))
-    return dx
+import time
+start_time = time.time()
+oem.compute(y)
+end_time = time.time()
 
-oem = OEM(K, SaInv, SeInv, xa, y)
+dt = end_time - start_time
+nt = os.environ["OMP_NUM_THREADS"]
+with open("results_" + str(nt) + ".dat", "w") as f:
+    f.write(dt)
 
-dy = (K.multiply(xa) - y).view(Vector)
-g  = K.transpose_multiply(SeInv.multiply(dy))
-r  = (-g).view(Vector)
-p  = (-r).view(Vector)
-x0 = np.zeros(g.shape).view(Vector)
+
 
 #x = oem.compute()
 #103011 // -1.1308e+12
