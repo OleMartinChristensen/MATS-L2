@@ -10,7 +10,7 @@ Repository for MATS level 2 processing tools
 - Intel MKL
 
 The `invlib` Python interface uses Intel MKL for efficient matrix operations,
-which can be installed from the (intel homepage)[https://software.intel.com/en-us/mkl].
+which can be installed from the [intel homepage](https://software.intel.com/en-us/mkl).
 After successful installation it is recommended to source the `compilervars.sh` script
 which declares environment variables informing other code about the MKL installation.
 
@@ -27,7 +27,7 @@ export MKL_ROOT=<intel_install_dir>/mkl
 
 ### Getting the source code
 
-To get the invlib source code clone the [invlib](https://github.com/simonpf/invlib) repository
+To get the invlib source code clone the (invlib)[https://github.com/simonpf/invlib] repository
 to a destination of your choice.
 
 ```
@@ -46,7 +46,3 @@ python setup.py install
 ## Running the code
 
 The `test/mats.py` provides an example on how to run an OEM calculation using invlib.
-
-
-
-
